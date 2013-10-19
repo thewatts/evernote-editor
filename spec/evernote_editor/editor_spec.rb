@@ -6,15 +6,28 @@ describe EvernoteEditor::Editor do
     # Make sure the necessary paths exist in our fakefs fake file system
     FileUtils.mkpath(File.expand_path("~"))
     FileUtils.mkpath(File.expand_path("/tmp"))
-    @mock_note_store = double("note_store",
-      createNote: double("note", guid: "123", title: 'Alpha'),
-      getNote:    double("note", guid: "123", title: 'Alpha',
-        :content= => nil, :updated= => nil,
-        content: "<?xml version=\"2.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE en-note SYSTEM \"http://xml.evernote.com/pub/enml2.dtd\">\n<en-note><div>alpha bravo</div></en-note>"),
+    @mock_note_store = double(
+      "note_store",
+      :createNote => double("note", guid: "123", title: 'Alpha'),
+      :getNote    => double(
+        "note",
+        :guid => "123",
+        :title => 'Alpha',
+        :content= => nil,
+        :updated= => nil,
+        :content  =>
+          "<?xml version=\"2.0\" encoding=\"UTF-8\"?>\n"\
+          "<!DOCTYPE en-note SYSTEM \"http://xml.evernote.com/pub/enml2.dtd\">\n"\
+          "<en-note><div>alpha bravo</div></en-note>"),
       :updateNote => nil,
-      findNotes:  double("notes", notes: [
-        double("note", title: 'alpha', guid: "123", updated: 1361577921000 ),
-        double("note", title: 'bravo', guid: "456", updated: 1361577937000 )]))
+      :findNotes  => double(
+        "notes",
+        notes: [
+          double("note", title: 'alpha', guid: "123", updated: 1361577921000 ),
+          double("note", title: 'bravo', guid: "456", updated: 1361577937000 )
+        ]
+      )
+    )
   end
 
   describe "#configure" do
@@ -44,30 +57,33 @@ describe EvernoteEditor::Editor do
         enved.stub(:ask).with(/token/).and_return('123')
         enved.stub(:ask).with(/editor/).and_return('vim')
         enved.configure
-        JSON::load(File.open(File.expand_path("~/.evned")))['token'].should eq "123"
+        config_file = File.open(File.expand_path("~/.evned"))
+
+        JSON::load(config_file)['token'].should eq "123"
       end
 
       it "stores the editor path" do
         enved.stub(:ask).with(/token/).and_return('123')
         enved.stub(:ask).with(/editor/).and_return('vim')
         enved.configure
-        JSON::load(File.open(File.expand_path("~/.evned")))['editor'].should eq "vim"
+        config_file = File.open(File.expand_path("~/.evned"))
+
+        JSON::load(config_file)['editor'].should eq "vim"
       end
 
     end
 
     context "when a configuration dot file exists" do
 
-      before { write_fakefs_config }
+      before        { write_fakefs_config }
+      after(:each)  { enved.configure }
 
       it "does not prompt for a developer token" do
         enved.should_not_receive(:ask).with(/token/)
-        enved.configure
       end
 
       it "does not prompt for an editor path" do
         enved.should_not_receive(:ask).with(/editor/)
-        enved.configure
       end
 
     end
@@ -89,7 +105,9 @@ describe EvernoteEditor::Editor do
       it "rewrites the configuration file" do
         enved.should_receive(:ask).with(/token/).and_return('123')
         enved.configure
-        JSON::load(File.open(File.expand_path("~/.evned")))['token'].should eq "123"
+        config_file = File.open(File.expand_path("~/.evned"))
+
+        JSON::load(config_file)['token'].should eq "123"
       end
 
     end
@@ -125,7 +143,8 @@ describe EvernoteEditor::Editor do
 
       it "prints your note to STDOUT so you don't lose it" do
         enved.stub!(:open_editor)
-        EvernoteOAuth::Client.stub(:new).and_raise(Evernote::EDAM::Error::EDAMSystemException)
+        EvernoteOAuth::Client.stub(:new).and_raise(
+          Evernote::EDAM::Error::EDAMSystemException)
         enved.should_receive(:graceful_failure).once
         enved.configure
         enved.create_note
@@ -151,14 +170,16 @@ describe EvernoteEditor::Editor do
 
       it "displays an error message" do
         enved.configure
-        EvernoteOAuth::Client.stub(:new).and_raise(Evernote::EDAM::Error::EDAMSystemException)
+        EvernoteOAuth::Client.stub(:new).and_raise(
+          Evernote::EDAM::Error::EDAMSystemException)
         enved.should_receive(:say).with(/sorry/i).once
         enved.search_notes
       end
 
       it "returns false" do
         enved.configure
-        EvernoteOAuth::Client.stub(:new).and_raise(Evernote::EDAM::Error::EDAMSystemException)
+        EvernoteOAuth::Client.stub(:new).and_raise(
+          Evernote::EDAM::Error::EDAMSystemException)
         enved.stub(:say)
         enved.search_notes.should eq false
       end
@@ -219,7 +240,8 @@ describe EvernoteEditor::Editor do
       context "when there is an Evernote Cloud API communication error" do
 
         it "prints your note to STDOUT so you don't lose it" do
-          @mock_note_store.stub(:updateNote).and_raise(Evernote::EDAM::Error::EDAMSystemException)
+          @mock_note_store.stub(:updateNote).and_raise(
+            Evernote::EDAM::Error::EDAMSystemException)
           EvernoteOAuth::Client.stub(:new).and_return(
             double("EvernoteOAuth::Client", note_store: @mock_note_store))
           enved.stub(:choose).and_return('123')
